@@ -3,20 +3,20 @@
 import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
-
-
 import { generateGeminiContent } from "@/lib/gemini";
+import { validateInput } from "@/lib/validate"; 
+import { resumeSaveSchema, resumeImprovementSchema } from "@/lib/schemas/forms";
 
-
-export async function saveResume(content) {
+export async function saveResume(rawContent) {
   const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
+  if (!userId) return { success: false, errors: { _form: ["Sign-in required to update resume files."] } };
 
-  const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
-  });
+  // Validate limits before committing data storage space
+  const validation = validateInput(resumeSaveSchema, { content: rawContent });
+  if (!validation.success) return { success: false, errors: validation.errors };
 
-  if (!user) throw new Error("User not found");
+  const user = await db.user.findUnique({ where: { clerkUserId: userId } });
+  if (!user) return { success: false, errors: { _form: ["Active database profile not found."] } };
 
   try {
     const resume = await db.resume.upsert({
@@ -24,31 +24,29 @@ export async function saveResume(content) {
         userId: user.id,
       },
       update: {
-        content,
+        content: validation.data.content,
       },
       create: {
         userId: user.id,
-        content,
+        content: validation.data.content,
       },
     });
 
     revalidatePath("/resume");
-    return resume;
+    return { success: true, data: resume };
   } catch (error) {
-    console.error("Error saving resume:", error);
-    throw new Error("Failed to save resume");
+    console.error("Error saving resume content:", error);
+    return { success: false, errors: { _form: ["Failed to update resume storage transaction record."] } };
   }
 }
 
 export async function getResume() {
   const { userId } = await auth();
-
   if (!userId) throw new Error("Unauthorized");
 
   const user = await db.user.findUnique({
     where: { clerkUserId: userId },
   });
-
   if (!user) throw new Error("User not found");
 
   return await db.resume.findUnique({
@@ -58,9 +56,15 @@ export async function getResume() {
   });
 }
 
-export async function improveWithAI({ current, type }) {
+export async function improveWithAI(rawParams) {
   const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
+  if (!userId) return { success: false, errors: { _form: ["Sign-in expired. Please authenticate again."] } };
+
+  // Pre-sanitize inputs and ensure the field optimization parameters map to allowed values
+  const validation = validateInput(resumeImprovementSchema, rawParams);
+  if (!validation.success) return { success: false, errors: validation.errors };
+
+  const { current, type } = validation.data;
 
   const user = await db.user.findUnique({
     where: { clerkUserId: userId },
@@ -68,11 +72,10 @@ export async function improveWithAI({ current, type }) {
       industryInsight: true,
     },
   });
-
-  if (!user) throw new Error("User not found");
+  if (!user) return { success: false, errors: { _form: ["User account match could not be checked."] } };
 
   const prompt = `
-    As an expert resume writer, improve the following ${type} description for a ${user.industry} professional.
+    As an expert resume writer, improve the following ${type} description for a ${user.industry || "Professional"} industry profile.
     Make it more impactful, quantifiable, and aligned with industry standards.
     Current content: "${current}"
 
@@ -90,14 +93,10 @@ export async function improveWithAI({ current, type }) {
   try {
     const result = await generateGeminiContent(prompt);
     const response = result.response;
-    const improvedContent = response.text().trim();
-    return improvedContent;
+    const improvedText = response.text().trim();
+    return { success: true, data: improvedText };
   } catch (error) {
-    console.error("Error improving content:", error);
-    throw new Error(
-      error?.code === "RATE_LIMITED"
-        ? "AI quota reached — please try again in a few minutes."
-        : "Failed to improve content"
-    );
+    console.error("Error optimizing structural field elements:", error);
+    return { success: false, errors: { _form: [error?.message || "AI pipeline configuration encountered an error."] } };
   }
 }
