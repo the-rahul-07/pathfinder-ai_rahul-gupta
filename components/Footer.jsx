@@ -96,7 +96,8 @@ export default function Footer() {
             <ul className="grid gap-3">
               <li>
                 <button
-                  onClick={() => isSignedIn ? router.push("/dashboard") : router.push("/")}
+                  type="button"
+                  onClick={() => router.push("/dashboard")}
                   className="group flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors text-sm"
                 >
                   <LayoutDashboard className="h-4 w-4 transition-transform group-hover:scale-110" />
