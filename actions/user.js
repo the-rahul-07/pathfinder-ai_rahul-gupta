@@ -43,18 +43,21 @@ export async function updateUser(data) {
       precomputedInsights = null;
     }
 
+     const result = await db.$transaction(
+      async (tx) => {
+
       const industryInsight = precomputedInsights
         ? await tx.industryInsight.upsert({
-            where: { industry: data.industry },
+            where: { industry: profileData.industry },
             update: {},
             create: {
-              industry: data.industry,
+              industry: profileData.industry,
               ...precomputedInsights,
               nextUpdate: getIndustryInsightRefreshTime(),
             },
           })
         : await tx.industryInsight.findUnique({
-            where: { industry: data.industry },
+            where: { industry: profileData.industry },
           });
 
       /* ---------------------------------------------- *
@@ -72,7 +75,6 @@ export async function updateUser(data) {
           skills: profileData.skills ?? [],
         },
       });
-
       return { updatedUser, industryInsight };
     },
     { timeout: 10_000 }
