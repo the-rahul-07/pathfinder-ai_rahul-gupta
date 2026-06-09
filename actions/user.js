@@ -33,7 +33,10 @@ export async function updateUser(data) {
   // long-running external calls inside a DB tx (which can cause timeouts).
   let precomputedInsights = null;
   try {
-    precomputedInsights = await generateAIInsights(profileData.industry, profileData);
+    precomputedInsights = await generateAIInsights(
+      profileData.industry,
+      profileData
+    );
   } catch (e) {
     console.error("Failed to generate insights pre-transaction:", e);
     precomputedInsights = null;
