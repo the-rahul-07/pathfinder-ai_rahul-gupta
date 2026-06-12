@@ -5,16 +5,9 @@ import Link from "next/link";
 import RoadmapView from "./_components/roadmap-view";
 
 export default async function RoadmapPage() {
-  let roadmap = null;
-  let error = null;
-  
-  try {
-    roadmap = await getRoadmap();
-  } catch (err) {
-    console.error("Roadmap page error:", err);
-    error = err;
-  }
+  const { roadmap, error } = await getRoadmap();
 
+  // Show error state if something went wrong
   if (error) {
     return (
       <div className="min-h-screen bg-background relative overflow-hidden">
@@ -29,18 +22,29 @@ export default async function RoadmapPage() {
                 <Map className="h-8 w-8 md:h-12 md:w-12 text-primary" />
                 Career <span className="text-gradient-primary">Roadmap</span>
               </h1>
+              <p className="text-muted-foreground text-sm md:text-base font-medium mt-2">
+                Personalized, step-by-step milestones tailored to your skills and goals.
+              </p>
             </div>
           </div>
+
           <div className="glass rounded-[2.5rem] p-1 border border-white/10 shadow-2xl overflow-hidden">
             <div className="bg-background/40 backdrop-blur-md rounded-[2.2rem] p-6 md:p-10">
               <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-6">
                 <div className="h-20 w-20 rounded-3xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
                   <Map className="h-10 w-10 text-red-500" />
                 </div>
-                <h2 className="text-2xl font-bold text-foreground">Unable to load roadmap</h2>
-                <p className="text-muted-foreground">Please make sure you're signed in and try again.</p>
+                <div className="max-w-md space-y-2">
+                  <h2 className="text-2xl font-bold text-foreground">Unable to load roadmap</h2>
+                  <p className="text-muted-foreground">
+                    {error || "There was an error loading your roadmap. Please try again."}
+                  </p>
+                </div>
                 <Button asChild size="lg" className="rounded-2xl font-bold">
-                  <Link href="/roadmap/generate">Generate Roadmap</Link>
+                  <Link href="/roadmap/generate">
+                    <Sparkles className="h-5 w-5 mr-2" />
+                    Generate Roadmap
+                  </Link>
                 </Button>
               </div>
             </div>
@@ -50,6 +54,7 @@ export default async function RoadmapPage() {
     );
   }
 
+  // Normal render when no error
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-10 md:py-16">
@@ -68,7 +73,11 @@ export default async function RoadmapPage() {
                 Personalized, step-by-step milestones tailored to your skills and goals.
               </p>
             </div>
-            <Button asChild size="lg" className="h-14 px-8 rounded-2xl font-bold shadow-xl shadow-primary/20 hover:scale-105 transition-all group">
+
+            <Button asChild
+              size="lg"
+              className="h-14 px-8 rounded-2xl font-bold shadow-xl shadow-primary/20 hover:scale-105 transition-all group"
+            >
               <Link href="/roadmap/generate">
                 <Sparkles className="h-5 w-5 mr-2 transition-transform group-hover:scale-110" />
                 {roadmap ? "Regenerate Roadmap" : "Generate Roadmap"}
@@ -90,10 +99,14 @@ export default async function RoadmapPage() {
                   <h2 className="text-2xl font-bold text-foreground">No roadmap yet</h2>
                   <p className="text-muted-foreground">
                     Generate a personalized career roadmap based on your current profile, skills, and target role.
+                    Make sure your profile is complete in Settings first.
                   </p>
                 </div>
                 <Button asChild size="lg" className="rounded-2xl font-bold">
-                  <Link href="/roadmap/generate">Generate Your Roadmap</Link>
+                  <Link href="/roadmap/generate">
+                    <Sparkles className="h-5 w-5 mr-2" />
+                    Generate Your Roadmap
+                  </Link>
                 </Button>
               </div>
             )}
